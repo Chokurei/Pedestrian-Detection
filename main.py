@@ -11,8 +11,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from obtain_mistake_rows import excel_to_Dataframe
 import models
+from obtain_mistake_rows import excel_to_Dataframe
 from plot_learning_curves import acc_loss_visual
 from log_writing import log_write
 
@@ -153,7 +153,7 @@ def save_result(result_path, y_pred, script_name, model_name, time_global):
         os.mkdir(separate_result_file)
     np.save(os.path.join(separate_result_file,'result_'+script_name+"_"+model_name+'.npy'), y_pred)
 
-def save_result_image(y_pred, y_test, path_all_test):
+def save_result_image(result_path, x_test, y_pred, y_test, path_all_test, time_global):
     """
     Save result images of FN and FP
     """
@@ -224,112 +224,117 @@ def delete_mistake(path_list, mistake_rows_name):
     return path_list
 
 
-
-
-time_global = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
-script_name = os.path.basename(__file__)
-
-data_path = '/media/kaku/Data/Shao_pedestrian/data/'
-model_path = '../model/'
-result_path = '../result/'
-#mistake_file = '/media/kaku/Data/Shao_pedestrian/data/mistake_rows.csv'
-mistake_file = '/media/kaku/Data/Shao_pedestrian/data/mistake.xlsx'
-
-#train_files = ['1-2k']
-#test_files = ['2-3k', '3-4k', 'Case02']
-#train_files = ['1-2k', '2-3k', '3-4k',]
-train_files = ['1-2k',]
-test_files = ['Case02']
-form = r'*G2d*.csv'
-value_idx = (7,2707,3)
-case_diff = 3.60 - 2.72
-region = (3,28)
-
-nb_epoch = 200
-patch_size = 30
-batch_size = 32
-cv_ratio = 0.1
-N_Cls = 2
-
-get_model = models.CNN_mnist
-model_name = '2017-11-09-22-26'
-
-# settings
-mistake_line = True #have mistake in some lines
-model_train = True
-model_test = True
-test_label = True
-diff_switch = False, True #different case between each case
-diff_size = True, False #make case 2 to be the standard
-
-MODEL_TYPE = get_model.__name__
-
-if mistake_line:
-    mistake_data = excel_to_Dataframe(mistake_file)
-    mistake_rows_name = rows_rename(mistake_data)
+def main():
+    time_global = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
+    script_name = os.path.basename(__file__)
     
-if model_train:
-    train_path_list = read_path_list(data_path, train_files, form)
-    if mistake_line:
-        train_path_list = delete_mistake(train_path_list, mistake_rows_name)
-    X, y, path_all_train = read_img_and_labels(value_idx, train_path_list, case_diff, diff=diff_switch[0])
-    if diff_size[0]:
-        X = image_resize(X, region, patch_size)
-    x_train, x_cv, y_train, y_cv = train_test_split(X, y, test_size=cv_ratio, random_state=42)
-    model_name = time_global
-    model = get_model(patch_size, N_Cls)
-    train_begin = time.time()
-    History = model.fit(x_train, y_train, batch_size=batch_size, epochs=nb_epoch, verbose=1, validation_data=(x_cv, y_cv))
-    time_train = (time.time()-train_begin)
-    save_model(model, model_path, model_name)
-    acc_loss_visual(History.history, result_path, script_name, model_name, time_global)
-       
-else:
-    model = read_model(model_path, model_name)
-
-if model_test:
-    test_path_list = read_path_list(data_path, test_files, form)    
-    if mistake_line:
-        test_path_list = delete_mistake(test_path_list, mistake_rows_name)
-    x_test, y_test, path_all_test = read_img_and_labels(value_idx, test_path_list,case_diff, diff=diff_switch[1])
-    if diff_size[1]:
-        x_test = image_resize(x_test, region, patch_size)
-    test_begin = time.time()
-    y_pred = model.predict(x_test)
-    time_test = (time.time()-test_begin)
-    if test_label:
-        con_mat, score = result_calculate(model, x_test, y_test, y_pred)
-        save_result(result_path, y_pred, script_name, model_name, time_global)
-        save_result_image(y_pred, y_test, path_all_test)
-    else:
-        print('Without labels')
-
-if model_train and model_test:
-    if test_label:
-        log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
-                      nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
-                      y, time_train, History, len(y_test),time_test, con_mat,score,\
-                      train_mode = True, test_mode = True, label_mode = True)
-    else:
-        log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
-                      nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
-                      y, time_train, History, len(y_test),time_test, \
-                      train_mode = True, test_mode = True)
-
-elif model_train and not model_test:
-        log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
-                      nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
-                      y, time_train, History,\
-                      train_mode = True)
+    data_path = '/media/kaku/Data/Shao_pedestrian/data/'
+    model_path = '../model/'
+    result_path = '../result/'
+    #mistake_file = '/media/kaku/Data/Shao_pedestrian/data/mistake_rows.csv'
+    mistake_file = '/media/kaku/Data/Shao_pedestrian/data/mistake.xlsx'
     
-else:
-    if test_label:
-        log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
-                      nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
-                      0,0,0,len(y_test),time_test,con_mat,score,\
-                      test_mode = True, label_mode = True)
+    #train_files = ['1-2k']
+    #test_files = ['2-3k', '3-4k', 'Case02']
+    #train_files = ['1-2k', '2-3k', '3-4k',]
+    train_files = ['Case02',]
+    test_files = ['Case02']
+    form = r'*G2d*.csv'
+    value_idx = (7,2707,3)
+    case_diff = 3.60 - 2.72
+    region = (3,28)
+    
+    nb_epoch = 200
+    patch_size = 30
+    batch_size = 32
+    cv_ratio = 0.1
+    N_Cls = 2
+    
+    get_model = models.CNN_mnist
+    model_name = '2017-11-09-22-26'
+    
+    # settings
+    mistake_line = True #have mistake in some lines
+    model_train = True
+    model_test = False
+    test_label = False
+    diff_switch = False, True #different case between each case, add case_diff
+    diff_size = False, False #resize image, make case 2 to be the standard
+    
+    MODEL_TYPE = get_model.__name__
+    
+    if mistake_line:
+        mistake_data = excel_to_Dataframe(mistake_file)
+        mistake_rows_name = rows_rename(mistake_data)
+        
+    if model_train:
+        train_path_list = read_path_list(data_path, train_files, form)
+        if mistake_line:
+            train_path_list = delete_mistake(train_path_list, mistake_rows_name)
+        X, y, path_all_train = read_img_and_labels(value_idx, train_path_list, case_diff, diff=diff_switch[0])
+        if diff_size[0]:
+            X = image_resize(X, region, patch_size)
+        x_train, x_cv, y_train, y_cv = train_test_split(X, y, test_size=cv_ratio, random_state=42)
+        model_name = time_global
+        model = get_model(patch_size, N_Cls)
+        train_begin = time.time()
+        History = model.fit(x_train, y_train, batch_size=batch_size, epochs=nb_epoch, verbose=1, validation_data=(x_cv, y_cv))
+        time_train = (time.time()-train_begin)
+        save_model(model, model_path, model_name)
+        acc_loss_visual(History.history, result_path, script_name, model_name, time_global)
+           
     else:
-        log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
-                      nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
-                      0,0,0,len(y_test),time_test,\
-                      test_mode = True)             
+        model = read_model(model_path, model_name)
+    
+    if model_test:
+        test_path_list = read_path_list(data_path, test_files, form)    
+        if mistake_line:
+            test_path_list = delete_mistake(test_path_list, mistake_rows_name)
+        x_test, y_test, path_all_test = read_img_and_labels(value_idx, test_path_list,case_diff, diff=diff_switch[1])
+        if diff_size[1]:
+            x_test = image_resize(x_test, region, patch_size)
+        test_begin = time.time()
+        y_pred = model.predict(x_test)
+        time_test = (time.time()-test_begin)
+        if test_label:
+            con_mat, score = result_calculate(model, x_test, y_test, y_pred)
+            save_result(result_path, y_pred, script_name, model_name, time_global)
+            save_result_image(result_path, x_test, y_pred, y_test, path_all_test, time_global)
+        else:
+            print('Without labels')
+    
+
+    if model_train and model_test:
+        if test_label:
+            log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
+                          nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
+                          y, time_train, History, len(y_test),time_test, con_mat,score,\
+                          train_mode = True, test_mode = True, label_mode = True)
+        else:
+            log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
+                          nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
+                          y, time_train, History, len(y_test),time_test, \
+                          train_mode = True, test_mode = True)
+    
+    elif model_train and not model_test:
+            log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
+                          nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
+                          y, time_train, History,\
+                          train_mode = True)
+    else:
+        if test_label:
+            log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
+                          nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
+                          0,0,0,len(y_test),time_test,con_mat,score,\
+                          test_mode = True, label_mode = True)
+        else:
+            log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
+                          nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
+                          0,0,0,len(y_test),time_test,\
+                          test_mode = True)      
+    
+if __name__ == '__main__':
+    print('Start Pedestrain Detection')
+    main()
+else:
+    print('Hello')
