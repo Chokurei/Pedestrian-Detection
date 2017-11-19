@@ -8,7 +8,7 @@ Created on Fri May 19 23:13:39 2017
 import os, sys
 import numpy as np
 
-def log_write(result_path, time_global, script_name, PATCH_SIZE, N_ClASS, BATCH_SIZE,\
+def log_write(settings, result_path, time_global, script_name, PATCH_SIZE, N_ClASS, BATCH_SIZE,\
               EPOCH, CV_RATIO, model, model_name, model_type,\
               *args,\
               train_mode = False, test_mode = False, label_mode = False):
@@ -17,11 +17,21 @@ def log_write(result_path, time_global, script_name, PATCH_SIZE, N_ClASS, BATCH_
     log_file=open(os.path.join(result_path,'my_log.txt'),'a')
     
     sys.stdout = log_file
+    train_files_name = settings[0]
+    test_files_name = settings[1]
+    train_compensate, test_compensate = settings[2][0], settings[2][1]
+    train_size_change, test_size_change = settings[3][0], settings[3][1]
+    region = settings[4]
     
     print('########################Time: '+time_global+'########################')
     print('############################File: '+script_name+'########################')
     if train_mode:
         print('Model type: {}'.format(model_type))
+        print("Training file names: {}".format(train_files_name))
+        if train_compensate:
+            print("Height compensate in training data")
+        if train_size_change:
+            print("Resize image size in training data, from {}x{} to {}x{}".format(PATCH_SIZE,PATCH_SIZE,PATCH_SIZE-region[0],PATCH_SIZE-region[0]))
         print('Training sample size: '+''+str(PATCH_SIZE)+' x '+str(PATCH_SIZE))
         TRINING_SAMPLES = args[0]
         time_train = args[1]
@@ -43,7 +53,11 @@ def log_write(result_path, time_global, script_name, PATCH_SIZE, N_ClASS, BATCH_
         print('Using model: {}'.format(model_name))
         
     if test_mode:
-#        print('Load model: {}'.format(model_name))
+        print("Testing file names: {}".format(test_files_name))
+        if test_compensate:
+            print("Height compensate in testing data")
+        if test_size_change:
+            print("Resize image size in testing data, from {}x{} to {}x{}".format(PATCH_SIZE,PATCH_SIZE,region[0],region[1]))
         test_amount = args[3]
         test_time = args[4]
         print('Testing image pieces: '+str(test_amount))
@@ -51,7 +65,6 @@ def log_write(result_path, time_global, script_name, PATCH_SIZE, N_ClASS, BATCH_
         if label_mode:
             con_mat = args[5]
             score = args[6]
-            
             
             print("Testing result:")
             print('     confusion matrix: ')

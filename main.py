@@ -228,17 +228,21 @@ def main():
     time_global = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
     script_name = os.path.basename(__file__)
     
-    data_path = '/media/kaku/Data/Shao_pedestrian/data/'
+    data_path = '/media/kaku/HDCL-UT/Shao_pedestrian/data/'
     model_path = '../model/'
     result_path = '../result/'
     #mistake_file = '/media/kaku/Data/Shao_pedestrian/data/mistake_rows.csv'
-    mistake_file = '/media/kaku/Data/Shao_pedestrian/data/mistake.xlsx'
+    mistake_file = '/media/kaku/HDCL-UT/Shao_pedestrian/data/mistake.xlsx'
     
-    #train_files = ['1-2k']
+    train_files = ['1-2k','2-3k','3-4k']
     #test_files = ['2-3k', '3-4k', 'Case02']
     #train_files = ['1-2k', '2-3k', '3-4k',]
-    train_files = ['Case02',]
-    test_files = ['Case02']
+#    train_files = ['3-4k']
+#    test_files = ['2-3k']
+    test_files = ['2-3k','3-4k']
+#    test_files = ['Sample_Case01_0-1k', 'Sample_Case01_4-5k']
+#    test_files = ['Case02']
+#    test_files = ['1-2k','2-3k','3-4k']
     form = r'*G2d*.csv'
     value_idx = (7,2707,3)
     case_diff = 3.60 - 2.72
@@ -251,14 +255,14 @@ def main():
     N_Cls = 2
     
     get_model = models.CNN_mnist
-    model_name = '2017-11-09-22-26'
+    model_name = '2017-11-16-13-19'
     
     # settings
     mistake_line = True #have mistake in some lines
-    model_train = True
-    model_test = False
-    test_label = False
-    diff_switch = False, True #different case between each case, add case_diff
+    model_train = False
+    model_test = True
+    test_label = True
+    diff_compensate = False, False #different case between each case, add case_diff
     diff_size = False, False #resize image, make case 2 to be the standard
     
     MODEL_TYPE = get_model.__name__
@@ -271,7 +275,7 @@ def main():
         train_path_list = read_path_list(data_path, train_files, form)
         if mistake_line:
             train_path_list = delete_mistake(train_path_list, mistake_rows_name)
-        X, y, path_all_train = read_img_and_labels(value_idx, train_path_list, case_diff, diff=diff_switch[0])
+        X, y, path_all_train = read_img_and_labels(value_idx, train_path_list, case_diff, diff=diff_compensate[0])
         if diff_size[0]:
             X = image_resize(X, region, patch_size)
         x_train, x_cv, y_train, y_cv = train_test_split(X, y, test_size=cv_ratio, random_state=42)
@@ -290,7 +294,7 @@ def main():
         test_path_list = read_path_list(data_path, test_files, form)    
         if mistake_line:
             test_path_list = delete_mistake(test_path_list, mistake_rows_name)
-        x_test, y_test, path_all_test = read_img_and_labels(value_idx, test_path_list,case_diff, diff=diff_switch[1])
+        x_test, y_test, path_all_test = read_img_and_labels(value_idx, test_path_list,case_diff, diff=diff_compensate[1])
         if diff_size[1]:
             x_test = image_resize(x_test, region, patch_size)
         test_begin = time.time()
@@ -303,32 +307,32 @@ def main():
         else:
             print('Without labels')
     
-
+    settings = [train_files,test_files,diff_compensate,diff_size,region]
     if model_train and model_test:
         if test_label:
-            log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
+            log_write(settings, result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
                           nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
                           y, time_train, History, len(y_test),time_test, con_mat,score,\
                           train_mode = True, test_mode = True, label_mode = True)
         else:
-            log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
+            log_write(settings, result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
                           nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
                           y, time_train, History, len(y_test),time_test, \
                           train_mode = True, test_mode = True)
     
     elif model_train and not model_test:
-            log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
+            log_write(settings, result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
                           nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
                           y, time_train, History,\
                           train_mode = True)
     else:
         if test_label:
-            log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
+            log_write(settings, result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
                           nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
                           0,0,0,len(y_test),time_test,con_mat,score,\
                           test_mode = True, label_mode = True)
         else:
-            log_write(result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
+            log_write(settings, result_path, time_global, script_name,  patch_size, N_Cls, batch_size, \
                           nb_epoch, cv_ratio, model, model_name, MODEL_TYPE,\
                           0,0,0,len(y_test),time_test,\
                           test_mode = True)      
